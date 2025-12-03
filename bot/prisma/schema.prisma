@@ -1,0 +1,21 @@
+// 1. DBへの接続設定
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 2. 保存するデータの形（モデル定義）
+model ActivityLog {
+  id           Int      @id @default(autoincrement()) // 自動で増えるID
+  userId       String   // DiscordのユーザーID
+  username     String   // ユーザー名（表示用）
+  activityName String   // ゲーム名やアプリ名（例: "Visual Studio Code"）
+  startTime    DateTime @default(now()) // 開始時間
+  endTime      DateTime? // 終了時間（最初は空っぽなので ? をつける）
+
+  createdAt    DateTime @default(now())
+}

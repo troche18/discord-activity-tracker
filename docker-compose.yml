@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  # -----------------------------
+  # 1. Database (PostgreSQL)
+  # -----------------------------
+  db:
+    image: postgres:15-alpine
+    container_name: tracker-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: activity_logs
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  # -----------------------------
+  # 2. Discord Bot Service
+  # -----------------------------
+  bot:
+    container_name: tracker-bot
+    build:
+      context: ./bot
+      dockerfile: Dockerfile
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgres://user:password@db:5432/activity_logs
+      DISCORD_TOKEN: ${DISCORD_TOKEN}
+    volumes:
+      - ./bot:/app
+      - /app/node_modules
+    command: npm run dev
+    networks:
+      - app-network
+    restart: always
+
+  # -----------------------------
+  # 3. API Service (Backend)
+  # -----------------------------
+  api:
+    container_name: tracker-api
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgres://user:password@db:5432/activity_logs
+    networks:
+      - app-network
+
+# データの永続化設定
+volumes:
+  pgdata:
+
+# コンテナ間通信用のネットワーク
+networks:
+  app-network:
+    driver: bridge
