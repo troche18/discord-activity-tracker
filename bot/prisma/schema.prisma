@@ -19,3 +19,16 @@ model ActivityLog {
 
   createdAt    DateTime @default(now())
 }
+
+model UserStatusLog {
+  id        Int       @id @default(autoincrement())
+  userId    String
+  // Discordのステータスは文字です（'online', 'idle', 'dnd', 'offline'）
+  status    String
+  startTime DateTime  @default(now())
+  endTime   DateTime? // 最初は終わっていないので？
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}

@@ -98,6 +98,47 @@ client.on('presenceUpdate', async (oldPresence, newPresence) => {
       console.error('❌ DB Error:', error);
     }
   }
+
+  const oldStatus = oldPresence?.status || 'offline';
+  const newStatus = newPresence.status;
+
+  // ステータスが変わっていなければ何もしない
+  if (oldStatus == newStatus) return;
+
+  console.log(`🚦 Status Changed: ${oldStatus} -> ${newStatus}`);
+
+  try {
+    const activeStatusLog = await prisma.userStatusLog.findFirst({
+      where: {
+        userId: userId,
+        status: oldStatus, 
+        endTime: null,
+      },
+      orderBy: { startTime: 'desc' },
+    });
+
+    if (activeStatusLog) {
+      await prisma.userStatusLog.update({
+        where: { id: activeStatusLog.id },
+        data: { endTime: new Date() },
+      });
+    }
+  } catch (error) {
+    console.error('❌ Failed to update status end time:', error);
+  }
+  
+  try {
+    await prisma.userStatusLog.create({
+      data: {
+        userId: userId,
+        status: newStatus,
+        // startTime は自動
+      },
+    });
+    console.log(`💾 Status Saved: ${newStatus}`);
+  } catch (error) {
+    console.error('❌ Failed to create status log:', error);
+  }
 });
 
 client.login(process.env.DISCORD_TOKEN);
