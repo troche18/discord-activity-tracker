@@ -29,14 +29,55 @@ client.on('presenceUpdate', async (oldPresence, newPresence) => {
   const user = newPresence.user;
   const username = user?.username || 'Unknown';
 
+  const oldActivities = oldPresence?.activities || [];
   // 今やっているアクティビティ（ゲームなど）のリストを取得
-  const activities = newPresence.activities;
+  const newActivities = newPresence.activities;
 
-  // 何もしていなければ終了
-  if (activities.length === 0) return;
+  // ★ ここが Issue #1 の核心ロジックになります
+  // 「oldにはあったけど、newにはない」= 「終了したアクティビティ」
+  const endedActivities = oldActivities.filter(oldAct => {
+    // newActivitiesの中に、同じもの(equals)が存在しないなら、それは終わったということ
+    return !newActivities.some(newAct => newAct.equals(oldAct));
+  });
 
-  // 全てのアクティビティをループして保存
-  for (const activity of activities) {
+  if (endedActivities.length > 0) {
+    console.log('🛑 Ended Activities:', endedActivities.map(a => a.name));
+    // 終了したアクティビティを1つずつ処理する
+    for (const activity of endedActivities) {
+      // データベースから「閉じられていないログ」を探す
+      const activeLog = await prisma.activityLog.findFirst({
+        where: {
+          userId: userId,
+          activityName: activity.name,
+          endTime: null,
+        },
+        orderBy: {
+          // 万が一複数あっても、一番新しいやつを拾う
+          startTime: 'desc',
+        },
+      });
+
+      // 見つかったら終了時間を書き込む
+      if (activeLog) {
+        await prisma.activityLog.update({
+          where: {
+            id: activeLog.id,
+          },
+          data: {
+            endTime: new Date(),
+          },
+        });
+        console.log(`⏹️ Log closed: ${activity.name}`);
+      }
+    }
+  }
+
+  // 開始判定も同じロジックで行う
+  const startedActivities = newActivities.filter(newAct => {
+    return !oldActivities.some(oldAct => oldAct.equals(newAct));
+  });
+
+  for (const activity of startedActivities) {
     // 例: "Visual Studio Code" や "Apex Legends" などの名前
     const activityName = activity.name;
 
