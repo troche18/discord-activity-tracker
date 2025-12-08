@@ -42,19 +42,24 @@ services:
   # -----------------------------
   # 3. API Service (Backend)
   # -----------------------------
-  # api:
-  #   container_name: tracker-api
-  #   build:
-  #     context: ./api
-  #     dockerfile: Dockerfile
-  #   ports:
-  #     - "3000:3000"
-  #   depends_on:
-  #     - db
-  #   environment:
-  #     DATABASE_URL: postgres://user:password@db:5432/activity_logs
-  #   networks:
-  #     - app-network
+  api:
+    container_name: tracker-api
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgres://user:password@db:5432/activity_logs
+    volumes:
+      - ./api:/app
+      - /app/node_modules
+    # 開発モードで起動
+    command: npm run start:dev
+    networks:
+      - app-network
 
 # データの永続化設定
 volumes:
