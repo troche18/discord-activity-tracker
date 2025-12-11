@@ -3,6 +3,10 @@
 // 1. APIから返ってくるデータの形を定義 (Type Definition)
 type ActivityLog = {
   id: number;
+  user: {
+    username: string;
+    userId: string;
+  }
   activityName: string;
   status: string;
   startTime: string;
@@ -39,6 +43,9 @@ export default async function Home() {
             <thead className="bg-gray-100">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  User Name
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Activity Name
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -52,6 +59,9 @@ export default async function Home() {
             <tbody className="bg-white divide-y divide-gray-200">
               {activities.map((log) => (
                 <tr key={log.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {log.user.username}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     {log.activityName}
                   </td>

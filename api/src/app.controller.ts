@@ -22,6 +22,9 @@ export class AppController {
         startTime: 'desc', // 新しい順に並び替え
       },
       take: 50, // (任意) データが増えすぎないよう最新50件だけにする
+      include: {
+        user: true,
+      }
     });
     return logs;
   }
@@ -34,6 +37,9 @@ export class AppController {
         startTime: 'desc',
       },
       take: 50,
+      include: {
+        user: true,
+      }
     });
     return logs;
   }
