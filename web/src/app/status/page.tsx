@@ -10,6 +10,7 @@ type UserStatusLog = {
   status: string;
   startTime: string;
   endTime: string | null;
+  isUnexpectedEnd: boolean;
   createdAt: string;
 };
 
@@ -87,7 +88,7 @@ export default async function Home() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {log.endTime ? (
-                      <span className="text-gray-400">Changed</span>
+                      log.isUnexpectedEnd ? '⚠️ Unknown' : <span className="text-gray-400">Changed</span>
                     ) : (
                       <span className="text-green-600 font-bold flex items-center gap-1">
                         <span className="relative flex h-2 w-2">
