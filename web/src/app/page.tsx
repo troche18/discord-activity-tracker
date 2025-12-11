@@ -11,6 +11,7 @@ type ActivityLog = {
   status: string;
   startTime: string;
   endTime: string | null;
+  isUnexpectedEnd: boolean;
   createdAt: string;
 };
 
@@ -70,7 +71,7 @@ export default async function Home() {
                     {new Date(log.startTime).toLocaleString('ja-JP')}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {log.endTime ? '✅ Finished' : '🏃 Playing...'}
+                    {log.endTime ? (log.isUnexpectedEnd ? '⚠️ Unknown' : '✅ Finished') : '🏃 Playing...'}
                   </td>
                 </tr>
               ))}

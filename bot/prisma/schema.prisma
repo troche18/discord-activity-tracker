@@ -26,34 +26,36 @@ model User {
 // 2. アクティビティログ (Transaction Table)
 // --------------------------------------
 model ActivityLog {
-  id           Int      @id @default(autoincrement())
+  id              Int      @id @default(autoincrement())
   
   // 紐付け設定
-  userId       String
-  user         User     @relation(fields: [userId], references: [userId])
+  userId          String
+  user            User     @relation(fields: [userId], references: [userId])
 
   // username は削除しました (Userテーブルのものを見るから不要)
   
   activityName String
-  startTime    DateTime @default(now())
-  endTime      DateTime?
-  createdAt    DateTime @default(now())
+  startTime       DateTime @default(now())
+  endTime         DateTime?
+  isUnexpectedEnd Boolean @default(false)
+  createdAt       DateTime @default(now())
 }
 
 // --------------------------------------
 // 3. ステータスログ (Transaction Table)
 // --------------------------------------
 model UserStatusLog {
-  id        Int      @id @default(autoincrement())
+  id              Int      @id @default(autoincrement())
   
   // 紐付け設定
-  userId    String
-  user      User     @relation(fields: [userId], references: [userId])
+  userId          String
+  user            User     @relation(fields: [userId], references: [userId])
   
-  status    String
-  startTime DateTime @default(now())
-  endTime   DateTime?
-  createdAt DateTime @default(now())
+  status          String
+  startTime       DateTime @default(now())
+  endTime         DateTime?
+  isUnexpectedEnd Boolean @default(false)
+  createdAt       DateTime @default(now())
 
   @@index([userId])
 }

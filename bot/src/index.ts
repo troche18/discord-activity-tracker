@@ -15,8 +15,168 @@ const client = new Client({
   ],
 });
 
-client.once('ready', () => {
+client.once('ready', async () => {
   console.log(`✅ Logged in as ${client.user?.tag}`);
+
+  const activeLogs = await prisma.activityLog.findMany({
+    where: {
+      endTime: null,
+    },
+  });
+
+  const keptActivities = new Set<string>();
+
+  for (const log of activeLogs) {
+    // Botが参加している全サーバーから、そのユーザーを探す
+    // (findを使うと、見つかった時点でループが終わるので効率的)
+    const member = client.guilds.cache
+      .map(guild => guild.members.cache.get(log.userId))
+      .find(m => m !== undefined);
+
+    // もしメンバーが見つからない（サーバーから抜けた等）場合は、
+    // 継続確認できないので「終了」扱いにするのが安全
+    if (!member || !member.presence) {
+      await prisma.activityLog.update({
+        where: { id: log.id },
+        data: { 
+          endTime: new Date(),     // 時間はとりあえず「再起動時刻」を入れる（時系列を壊さないため）
+          isUnexpectedEnd: true    // ★フラグを立てる（＝「実は不明です」の合図）
+        },
+      });
+      continue;
+    }
+    
+    // ユーザーの現在のアクティビティリスト
+    const currentActivities = member.presence.activities;
+
+    // 判定ロジック
+    const isSessionContinuing = currentActivities.some(activity => {
+      // 1. 名前が一致するか？
+      const isSameName = activity.name === log.activityName;
+      
+      // 2. 開始時間が一致するか？
+      // Discord側の開始時間があるかチェック
+      const discordStartTime = activity.timestamps?.start;
+      
+      let isSameTime = false;
+      if (discordStartTime) {
+        // DBの時間と、Discordの時間の「ズレ」を計算
+        const diff = Math.abs(discordStartTime.getTime() - log.startTime.getTime());
+        
+        // ズレが 2000ミリ秒 (2秒) 未満なら「同じ」とみなす
+        // (通信ラグなどで完全に一致しないことがあるため、少し許容する)
+        isSameTime = diff < 2000;
+      }
+
+      // 名前が同じで、かつ (時間が記録されてない OR 時間も同じ) なら「継続」とみなす
+      // ※Discord側で時間が出ないゲームもあるため、discordStartTimeがない場合は名前一致だけでOKとする手もある
+      // ※今回のIssueの目的は「厳密なチェック」なので、以下のようにするのがベスト
+      if (discordStartTime) {
+        return isSameName && isSameTime;
+      } else {
+        return false;
+      }
+    });
+
+    if (isSessionContinuing) {
+      console.log(`✅ Session continued: ${log.activityName} (${member.user.username})`);
+      keptActivities.add(`${log.userId}:${log.activityName}`);
+    } else {
+      console.log(`🛑 Session ended during downtime: ${log.activityName} (${member.user.username})`);
+      await prisma.activityLog.update({
+        where: { id: log.id },
+        data: { 
+          endTime: new Date(),     // 時間はとりあえず「再起動時刻」を入れる（時系列を壊さないため）
+          isUnexpectedEnd: true    // ★フラグを立てる（＝「実は不明です」の合図）
+        },
+      });
+    }
+  }
+
+  const activeStatusLogs = await prisma.userStatusLog.findMany({
+    where: { endTime: null },
+  });
+
+  for (const log of activeStatusLogs) {
+    const member = client.guilds.cache
+      .map(guild => guild.members.cache.get(log.userId))
+      .find(m => m !== undefined);
+    
+    // メンバーが見つからない、または情報が取れない場合は、現在のステータスは 'offline' とみなす
+    const currentStatus = member?.presence?.status || 'offline';
+
+    console.log(`[Status] Closed zombie status: ${log.status} -> ${currentStatus} (${log.userId})`);
+    await prisma.userStatusLog.update({
+      where: { id: log.id },
+      data: { endTime: new Date(), isUnexpectedEnd: true },
+    });
+  }
+
+  // ---------------------------------------------------------
+  // 2. 現在の状態の新規登録 (Initialization)
+  // ---------------------------------------------------------
+  // 全サーバーの全メンバーをスキャンして、未登録のアクティビティがあれば登録する
+  for (const guild of client.guilds.cache.values()) {
+    for (const member of guild.members.cache.values()) {
+      if (member.user.bot) continue;
+
+      const userId = member.id;
+      const username = member.user.username;
+
+      // User情報の更新 (念のため)
+      try {
+        await prisma.user.upsert({
+          where: { userId: userId },
+          update: { username: username },
+          create: { userId: userId, username: username },
+        });
+      } catch (e) { /* 無視 */ }
+
+      // アクティビティの登録
+      if (member.presence) {
+        for (const activity of member.presence.activities) {
+          const key = `${userId}:${activity.name}`;
+          
+          // さっき「継続」と判定されたやつはスキップ (二重登録防止)
+          if (keptActivities.has(key)) continue;
+
+          console.log(`🆕 Found new activity on startup: ${activity.name} (${username})`);
+          
+          // 開始時間を決定 (Discordの記録があればそれを使う、なければ現在時刻)
+          const startTime = activity.timestamps?.start || new Date();
+
+          try {
+            await prisma.activityLog.create({
+              data: {
+                userId: userId,
+                activityName: activity.name,
+                startTime: startTime,
+              },
+            });
+          } catch (error) {
+            console.error('❌ DB Error (Startup):', error);
+          }
+        }
+      }
+
+      const currentStatus = member.presence?.status || 'offline';
+
+      console.log(`🆕 Found new status on startup: ${currentStatus} (${username})`);
+
+      try {
+        await prisma.userStatusLog.create({
+          data: {
+            userId: userId,
+            status: currentStatus,
+            // startTimeは現在時刻になる（APIから過去の時間は取れないため）
+            startTime: new Date(),
+          }
+        });
+      } catch (error) {
+        console.error('❌ DB Error (Status Startup):', error);
+      }
+    }
+  }
 });
 
 // 2. ステータス更新イベント（誰かの状態が変わったらここが動く）
@@ -110,7 +270,7 @@ client.on('presenceUpdate', async (oldPresence, newPresence) => {
         data: {
           userId: userId,
           activityName: activityName,
-          // startTimeはデフォルトで現在時刻が入ります
+          startTime: activity.timestamps?.start || new Date(),
         },
       });
       console.log(`💾 Saved to DB: ${activityName}`);
