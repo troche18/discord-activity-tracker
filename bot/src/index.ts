@@ -29,6 +29,27 @@ client.on('presenceUpdate', async (oldPresence, newPresence) => {
   const user = newPresence.user;
   const username = user?.username || 'Unknown';
 
+  try {
+    // ★ ここに追加: ユーザー情報の更新
+    // 「このuserIdの人がいたら名前を最新に更新、いなかったら新規登録」
+    await prisma.user.upsert({
+      where: {
+        userId: userId, // 検索キー (PK)
+      },
+      update: {
+        username: username, // 見つかったら名前を更新
+        // updatedAt は @updatedAt があるので自動更新されます
+      },
+      create: {
+        userId: userId,   // 見つからなかったらIDを登録
+        username: username, // 名前も登録
+      },
+    });
+  } catch (error) {
+    console.error('❌ Failed to upsert user:', error);
+    return; // ユーザー登録に失敗したら、ログ保存もできないのでここで終わる
+  }
+
   const oldActivities = oldPresence?.activities || [];
   // 今やっているアクティビティ（ゲームなど）のリストを取得
   const newActivities = newPresence.activities;
@@ -88,7 +109,6 @@ client.on('presenceUpdate', async (oldPresence, newPresence) => {
       await prisma.activityLog.create({
         data: {
           userId: userId,
-          username: username,
           activityName: activityName,
           // startTimeはデフォルトで現在時刻が入ります
         },

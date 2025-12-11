@@ -8,26 +8,51 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// 2. 保存するデータの形（モデル定義）
-model ActivityLog {
-  id           Int      @id @default(autoincrement()) // 自動で増えるID
-  userId       String   // DiscordのユーザーID
-  username     String   // ユーザー名（表示用）
-  activityName String   // ゲーム名やアプリ名（例: "Visual Studio Code"）
-  startTime    DateTime @default(now()) // 開始時間
-  endTime      DateTime? // 終了時間（最初は空っぽなので ? をつける）
+// --------------------------------------
+// 1. ユーザー情報 (Master Table)
+// --------------------------------------
+model User {
+  userId    String   @id // DiscordのIDをそのまま主キー(PK)にする
+  username  String   // 最新のユーザー名
+  updatedAt DateTime @updatedAt // 更新された時間を自動記録
+  createdAt DateTime @default(now())
 
+  // リレーション: 1人のユーザーは複数のログを持つ
+  activityLogs   ActivityLog[]
+  userStatusLogs UserStatusLog[]
+}
+
+// --------------------------------------
+// 2. アクティビティログ (Transaction Table)
+// --------------------------------------
+model ActivityLog {
+  id           Int      @id @default(autoincrement())
+  
+  // 紐付け設定
+  userId       String
+  user         User     @relation(fields: [userId], references: [userId])
+
+  // username は削除しました (Userテーブルのものを見るから不要)
+  
+  activityName String
+  startTime    DateTime @default(now())
+  endTime      DateTime?
   createdAt    DateTime @default(now())
 }
 
+// --------------------------------------
+// 3. ステータスログ (Transaction Table)
+// --------------------------------------
 model UserStatusLog {
-  id        Int       @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
+  
+  // 紐付け設定
   userId    String
-  // Discordのステータスは文字です（'online', 'idle', 'dnd', 'offline'）
+  user      User     @relation(fields: [userId], references: [userId])
+  
   status    String
-  startTime DateTime  @default(now())
-  endTime   DateTime? // 最初は終わっていないので？
-
+  startTime DateTime @default(now())
+  endTime   DateTime?
   createdAt DateTime @default(now())
 
   @@index([userId])
