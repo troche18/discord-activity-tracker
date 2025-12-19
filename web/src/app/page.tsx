@@ -1,6 +1,7 @@
 import Link from 'next/link';
-import SearchBar from '../components/SearchBar';
-import Pagination from '../components/Pagination';
+import SearchBar from '@/components/SearchBar';
+import Pagination from '@/components/Pagination';
+import SocketListener from '@/components/SocketListener';
 
 // 1. ユーザーの型定義
 type User = {
@@ -45,6 +46,7 @@ export default async function Home({
 
   return (
     <main className="min-h-screen p-8 bg-gray-50">
+      <SocketListener />
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold mb-8 text-gray-800 text-center">
           👥 Select User

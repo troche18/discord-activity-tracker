@@ -1,8 +1,13 @@
 import { Client, GatewayIntentBits } from 'discord.js';
 import { PrismaClient } from '@prisma/client';
+import { notifyUpdate } from './utils/apiClient';
 import dotenv from 'dotenv';
 
 dotenv.config();
+
+const sendNotification = (userId: string, type: 'activity' | 'status', data: any) => {
+  notifyUpdate(userId, type, data).catch(err => console.error('Failed to notify API:', err));
+};
 
 // 1. Prisma（データベース操作ツール）の準備
 const prisma = new PrismaClient();
@@ -153,6 +158,7 @@ client.once('ready', async () => {
                 startTime: startTime,
               },
             });
+            sendNotification(userId, 'activity', { name: activity.name });
           } catch (error) {
             console.error('❌ DB Error (Startup):', error);
           }
@@ -172,12 +178,15 @@ client.once('ready', async () => {
             startTime: new Date(),
           }
         });
+        sendNotification(userId, 'status', { status: currentStatus});
       } catch (error) {
         console.error('❌ DB Error (Status Startup):', error);
       }
     }
   }
 });
+
+
 
 // 2. ステータス更新イベント（誰かの状態が変わったらここが動く）
 client.on('presenceUpdate', async (oldPresence, newPresence) => {
@@ -249,6 +258,7 @@ client.on('presenceUpdate', async (oldPresence, newPresence) => {
           },
         });
         console.log(`⏹️ Log closed: ${activity.name}`);
+        sendNotification(newPresence.userId, 'activity', { name: activity.name });
       }
     }
   }
@@ -274,6 +284,7 @@ client.on('presenceUpdate', async (oldPresence, newPresence) => {
         },
       });
       console.log(`💾 Saved to DB: ${activityName}`);
+      sendNotification(newPresence.userId, 'activity', { name: activityName });
     } catch (error) {
       console.error('❌ DB Error:', error);
     }
@@ -316,6 +327,7 @@ client.on('presenceUpdate', async (oldPresence, newPresence) => {
       },
     });
     console.log(`💾 Status Saved: ${newStatus}`);
+    sendNotification(newPresence.userId, 'status', { status: newPresence.status });
   } catch (error) {
     console.error('❌ Failed to create status log:', error);
   }
