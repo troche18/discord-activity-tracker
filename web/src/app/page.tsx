@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import SearchBar from '../components/SearchBar';
+import Pagination from '../components/Pagination';
 
 // 1. ユーザーの型定義
 type User = {
@@ -8,9 +10,22 @@ type User = {
   updatedAt: string;
 };
 
+type UserResponse = {
+  data: User[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+};
+
 // 2. ユーザー一覧を取得する関数
-async function getUsers(): Promise<User[]> {
-  const res = await fetch('http://localhost:3000/users', { cache: 'no-store' });
+async function getUsers(page: string, limit: string, search: string): Promise<UserResponse> {
+  const res = await fetch(
+    `http://localhost:3000/users?page=${page}&limit=${limit}&search=${search}`,
+    { cache: 'no-store' }
+  );
   
   if (!res.ok) {
     throw new Error('Failed to fetch users');
@@ -19,8 +34,14 @@ async function getUsers(): Promise<User[]> {
   return res.json();
 }
 
-export default async function Home() {
-  const users = await getUsers();
+export default async function Home({
+  searchParams
+}: {
+  searchParams: Promise<{ page?: string, limit?: string, search?: string }>
+}) {
+  const { page = '1', limit = '50', search = '' } = await searchParams;
+  
+  const { data: users, meta } = await getUsers(page, limit, search);
 
   return (
     <main className="min-h-screen p-8 bg-gray-50">
@@ -28,6 +49,9 @@ export default async function Home() {
         <h1 className="text-3xl font-bold mb-8 text-gray-800 text-center">
           👥 Select User
         </h1>
+
+        {/* 検索バー */}
+        <SearchBar />
 
         {/* ユーザーカードのグリッド表示 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -61,6 +85,10 @@ export default async function Home() {
           <div className="text-center text-gray-500 mt-10">
             ユーザーがまだ登録されていません
           </div>
+        )}
+
+        {users.length > 0 && (
+          <Pagination page={meta.page} totalPages={meta.totalPages} />
         )}
       </div>
     </main>

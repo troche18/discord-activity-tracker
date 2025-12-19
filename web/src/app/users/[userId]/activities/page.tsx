@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import SearchBar from '../../../../components/SearchBar';
+import Pagination from '../../../../components/Pagination';
 
 // 1. 型定義 (以前と同じ)
 type ActivityLog = {
@@ -15,10 +17,23 @@ type ActivityLog = {
   createdAt: string;
 };
 
+type ActivityLogResponse = {
+  data: ActivityLog[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+};
+
 // 2. データ取得関数 (userIdを受け取るように変更！)
-async function getUserActivities(userId: string): Promise<ActivityLog[]> {
+async function getUserActivities(userId: string, page: string, limit: string, search: string): Promise<ActivityLogResponse> {
   // テンプレートリテラルでURLにクエリパラメータを埋め込む
-  const res = await fetch(`http://localhost:3000/activities?userId=${userId}`, { cache: 'no-store' });
+  const res = await fetch(
+    `http://localhost:3000/activities?userId=${userId}&page=${page}&limit=${limit}&search=${search}`,
+    { cache: 'no-store' }
+  );
   
   if (!res.ok) {
     throw new Error('Failed to fetch data');
@@ -29,10 +44,17 @@ async function getUserActivities(userId: string): Promise<ActivityLog[]> {
 
 // 3. 詳細ページコンポーネント
 // params という引数に URLの [userId] 部分が入ってきます
-export default async function UserPage({ params }: { params: Promise<{ userId: string }> }) {
+export default async function UserPage({
+  params,
+  searchParams
+}: {
+  params: Promise<{ userId: string}>,
+  searchParams: Promise<{ page?: string, limit?: string, search?: string }>
+}) {
   const { userId } = await params;
+  const { page = '1', limit = '50', search = '' } = await searchParams;
 
-  const activities = await getUserActivities(userId);
+  const { data: activities, meta} = await getUserActivities(userId, page, limit, search);
 
   // ユーザー名を表示するために、ログがあればそこから名前を取る（なければIDを表示）
   const username = activities.length > 0 ? activities[0].user.username : `ID: ${userId}`;
@@ -56,6 +78,9 @@ export default async function UserPage({ params }: { params: Promise<{ userId: s
             {username}'s Activity
           </h1>
         </div>
+
+        {/* 検索バー */}
+        <SearchBar />
 
         {/* テーブル (以前のコードを再利用) */}
         <div className="bg-white shadow-md rounded-lg overflow-hidden border border-gray-200">
@@ -100,6 +125,10 @@ export default async function UserPage({ params }: { params: Promise<{ userId: s
             <div className="p-12 text-center text-gray-500">
               ログがありません
             </div>
+          )}
+
+          {activities.length > 0 && (
+            <Pagination page={meta.page} totalPages={meta.totalPages} />
           )}
         </div>
       </div>
