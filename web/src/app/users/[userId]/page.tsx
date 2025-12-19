@@ -3,10 +3,13 @@ import Link from 'next/link';
 // ユーザー情報を少しだけ取ってきたいので、最低限のfetchを用意
 async function getUser(userId: string) {
   // ユーザー一覧APIからフィルタするか、単一取得APIがあればそれを使う
-  // ここでは簡易的に全件取得して探す形にします（本来は GET /users/:id があるとベスト）
-  const res = await fetch('http://localhost:3000/users', { cache: 'no-store' });
-  const users: any[] = await res.json();
-  return users.find(u => u.userId === userId);
+  const res = await fetch(`http://localhost:3000/users/${userId}`, { cache: 'no-store' });
+  
+  if (!res.ok) {
+    return null;
+  }
+
+  return res.json();
 }
 
 export default async function UserDashboard({ params }: { params: Promise<{ userId: string }> }) {

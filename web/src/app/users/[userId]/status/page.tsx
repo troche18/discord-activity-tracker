@@ -1,6 +1,6 @@
-// web/src/app/users/[userId]/status/page.tsx
-
 import Link from 'next/link';
+import SearchBar from '../../../../components/SearchBar';
+import Pagination from '../../../../components/Pagination';
 
 // 1. 型定義
 type UserStatusLog = {
@@ -16,9 +16,24 @@ type UserStatusLog = {
   createdAt: string;
 };
 
-// 2. データ取得関数 (userIdで絞り込み)
-async function getUserStatusLogs(userId: string): Promise<UserStatusLog[]> {
-  const res = await fetch(`http://localhost:3000/status?userId=${userId}`, { cache: 'no-store' });
+// レスポンスの型 (data + meta)
+type StatusLogResponse = {
+  data: UserStatusLog[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+};
+
+// 2. データ取得関数
+async function getUserStatusLogs(userId: string, page: string, limit: string, search: string): Promise<StatusLogResponse> {
+  // APIエンドポイントを /status に変更
+  const res = await fetch(
+    `http://localhost:3000/status?userId=${userId}&page=${page}&limit=${limit}&search=${search}`, 
+    { cache: 'no-store' }
+  );
   
   if (!res.ok) {
     throw new Error('Failed to fetch data');
@@ -42,10 +57,19 @@ const getStatusStyle = (status: string) => {
   }
 };
 
-export default async function UserStatusPage({ params }: { params: Promise<{ userId: string }> }) {
+// 4. メインコンポーネント
+export default async function UserStatusPage({ 
+  params, 
+  searchParams // ★重要: クエリパラメータはここから受け取ります
+}: { 
+  params: Promise<{ userId: string }>,
+  searchParams: Promise<{ page?: string, limit?: string, search?: string }> 
+}) {
+  // 非同期でそれぞれ取得
   const { userId } = await params;
+  const { page = '1', limit = '50', search = '' } = await searchParams;
   
-  const logs = await getUserStatusLogs(userId);
+  const { data: logs, meta } = await getUserStatusLogs(userId, page, limit, search);
   const username = logs.length > 0 ? logs[0].user.username : `ID: ${userId}`;
 
   return (
@@ -67,6 +91,9 @@ export default async function UserStatusPage({ params }: { params: Promise<{ use
             {username}'s Status History
           </h1>
         </div>
+
+        {/* 検索バー */}
+        <SearchBar />
 
         {/* テーブル */}
         <div className="bg-white shadow-md rounded-lg overflow-hidden border border-gray-200">
@@ -119,6 +146,11 @@ export default async function UserStatusPage({ params }: { params: Promise<{ use
             <div className="p-12 text-center text-gray-500">
               ステータスログがありません
             </div>
+          )}
+
+          {/* ページネーション */}
+          {logs.length > 0 && (
+            <Pagination page={meta.page} totalPages={meta.totalPages} />
           )}
         </div>
       </div>
