@@ -1,6 +1,7 @@
 import Link from 'next/link';
-import SearchBar from '../../../../components/SearchBar';
-import Pagination from '../../../../components/Pagination';
+import SearchBar from '@/components/SearchBar';
+import Pagination from '@/components/Pagination';
+import SocketListener from '@/components/SocketListener';
 
 // 1. 型定義
 type UserStatusLog = {
@@ -74,6 +75,7 @@ export default async function UserStatusPage({
 
   return (
     <main className="min-h-screen p-8 bg-gray-50">
+      <SocketListener userId={userId} />
       <div className="max-w-4xl mx-auto">
         {/* ナビゲーション: Dashboardに戻る */}
         <div className="mb-6">

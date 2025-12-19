@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { EventsGateway } from './events/events.gateway';
+import { WebhookController } from './webhook/webhook.controller';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaService } from './prisma.service';
@@ -15,14 +17,16 @@ import { StatusService } from './status.service';
     AppController,
     UsersController,
     ActivitiesController,
-    StatusController
+    StatusController,
+    WebhookController
   ],
   providers: [
     AppService,
     PrismaService,
     UsersService,
     ActivitiesService,
-    StatusService
+    StatusService,
+    EventsGateway
   ],
 })
 export class AppModule {}
