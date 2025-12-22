@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import CopyButton from '@/components/CopyButton';
+import DiscordLinkButton from '@/components/DiscordLinkButton';
 
 // ユーザー情報を少しだけ取ってきたいので、最低限のfetchを用意
 async function getUser(userId: string) {
@@ -37,6 +39,16 @@ export default async function UserDashboard({ params }: { params: Promise<{ user
             <h1 className="text-3xl font-bold text-gray-800">
               {username}
             </h1>
+            <div className="flex items-center gap-3 mt-2">
+              <span className="text-gray-500 font-mono text-sm bg-gray-100 px-2 py-1 rounded">
+                ID: {userId}
+              </span>
+              {/* コピーボタン */}
+              <CopyButton text={userId} />
+              
+              {/* ★ Discordリンクボタン */}
+              <DiscordLinkButton userId={userId} />
+            </div>
             <p className="text-gray-500">User Dashboard</p>
           </div>
         </div>

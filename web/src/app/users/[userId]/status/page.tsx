@@ -2,6 +2,8 @@ import Link from 'next/link';
 import SearchBar from '@/components/SearchBar';
 import Pagination from '@/components/Pagination';
 import SocketListener from '@/components/SocketListener';
+import CopyButton from '@/components/CopyButton';
+import DiscordLinkButton from '@/components/DiscordLinkButton';
 
 // 1. 型定義
 type UserStatusLog = {
@@ -92,6 +94,16 @@ export default async function UserStatusPage({
           <h1 className="text-3xl font-bold text-gray-800">
             {username}'s Status History
           </h1>
+          <div className="flex items-center gap-3 mt-2">
+            <span className="text-gray-500 font-mono text-sm bg-gray-100 px-2 py-1 rounded">
+              ID: {userId}
+            </span>
+            {/* コピーボタン */}
+            <CopyButton text={userId} />
+            
+            {/* ★ Discordリンクボタン */}
+            <DiscordLinkButton userId={userId} />
+          </div>
         </div>
 
         {/* 検索バー */}
