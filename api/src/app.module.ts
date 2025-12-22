@@ -10,6 +10,8 @@ import { ActivitiesController } from './activities.controller';
 import { ActivitiesService } from './activities.service';
 import { StatusController } from './status.controller';
 import { StatusService } from './status.service';
+import { WeeklyTimelineService } from './stats.weekly-timeline.service';
+import { StatsController } from './stats.weekly-timeline.controller';
 
 @Module({
   imports: [],
@@ -18,7 +20,8 @@ import { StatusService } from './status.service';
     UsersController,
     ActivitiesController,
     StatusController,
-    WebhookController
+    WebhookController,
+    StatsController
   ],
   providers: [
     AppService,
@@ -26,7 +29,8 @@ import { StatusService } from './status.service';
     UsersService,
     ActivitiesService,
     StatusService,
-    EventsGateway
+    EventsGateway,
+    WeeklyTimelineService
   ],
 })
 export class AppModule {}
